@@ -539,8 +539,8 @@ export default function DepotLayout() {
             {[
               { key: 'track1', name: 'Track 1', color: '#00e676', type: 'service' },
               { key: 'track2', name: 'Track 2', color: '#00e676', type: 'service' },
-              { key: 'track3', name: 'Track 3', color: '#ffd740', type: 'standby' },
-              { key: 'track4', name: 'Track 4', color: '#ffd740', type: 'standby' },
+              { key: 'track3', name: 'Track 3', color: '#ffd740', type: 'shared' },
+              { key: 'track4', name: 'Track 4', color: '#ffd740', type: 'shared' },
               { key: 'inspection', name: 'IBL', color: '#ff1744', type: 'maintenance' },
               { key: 'maintenance_bays', name: 'Bays', color: '#00c2ff', type: 'active' },
               { key: 'maintenance_queue', name: 'Queue', color: '#ff6d00', type: 'waiting' },
