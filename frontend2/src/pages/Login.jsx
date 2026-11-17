@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useSecurityLogs } from '../context/SecurityLogContext'
 import loginBg from '../assets/login-bg.jpg'
+import BackendStatus from '../components/ui/BackendStatus'
 
 const USERS = [
   { id: 'ADMIN001', password: 'admin123', role: 'admin' },
@@ -65,7 +66,7 @@ return (
 
     {/* Login Card */}
     <div
-      cclassName="panel w-full max-w-md p-8 relative z-10"
+      className="panel w-full max-w-md p-8 relative z-10"
       style={{
   background: 'rgba(10,15,25,0.15)',
   backdropFilter: 'blur(12px)',
@@ -98,18 +99,9 @@ return (
         </div>
       </div>
 
-      {/* Status */}
-      <div className="flex items-center justify-center gap-2 mb-5">
-        <div
-          className="w-2 h-2 rounded-full pulse-green"
-          style={{ background: 'var(--depot-green)' }}
-        />
-        <span
-          className="font-mono text-xs"
-          style={{ color: 'var(--depot-green)' }}
-        >
-          SYSTEM ONLINE
-        </span>
+      {/* Live backend status */}
+      <div className="mb-5">
+        <BackendStatus />
       </div>
 
       {/* Employee ID */}
