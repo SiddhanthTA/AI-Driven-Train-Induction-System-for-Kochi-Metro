@@ -12,17 +12,23 @@ FAILURE_BASE_PROB = 0.008
 HIGH_MILEAGE_FAILURE_MULTIPLIER = 1.8
 VERY_HIGH_MILEAGE_FAILURE_MULTIPLIER = 2.5
 
-def advance_one_day(trains, service_list, standby_list, maintenance_list):
+def advance_one_day(trains, service_list, standby_list, maintenance_list, active_maintenance_names=None):
 
     service_names = {t["train"] for t in service_list}
     standby_names = {t["train"] for t in standby_list}
-    maintenance_reason = {t["train"] : t["category"] for t in maintenance_list}
-    maintenance_names = set(maintenance_reason.keys())
+    all_maintenance_reasons = {t["train"]: t["category"] for t in maintenance_list}
+    maintenance_names = set(all_maintenance_reasons)
 
-    # initialize memory for newly entered maintenance trains
-    for m in maintenance_names:
-        if m not in MAINTENANCE_MEMORY:
-            MAINTENANCE_MEMORY[m] = 0
+    # Only trains assigned to an active bay can receive simulated repairs.
+    active_names = set(active_maintenance_names) if active_maintenance_names is not None else maintenance_names
+    maintenance_reason = {
+        name: reason for name, reason in all_maintenance_reasons.items()
+        if name in active_names
+    }
+
+    for name in maintenance_reason:
+        if name not in MAINTENANCE_MEMORY:
+            MAINTENANCE_MEMORY[name] = 0
 
     for train in trains:
 
