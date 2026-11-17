@@ -1,9 +1,10 @@
 // src/components/layout/TopBar.jsx
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Activity, Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
+import BackendStatus from '../ui/BackendStatus'
 
 const PAGE_TITLES = {
   '/':               { title: 'Induction Control Panel',      sub: 'Nightly fleet induction decision system' },
@@ -57,10 +58,7 @@ export default function TopBar() {
 
       {/* Right: status + user + theme toggle + clock */}
 <div className="flex items-center gap-5">
-  <div className="flex items-center gap-2 text-xs font-mono">
-    <Activity size={12} style={{ color: 'var(--depot-green)' }} />
-    <span style={{ color: 'var(--depot-green)' }}>SYSTEM ONLINE</span>
-  </div>
+  <BackendStatus />
 
   {/* User Info */}
   <div
