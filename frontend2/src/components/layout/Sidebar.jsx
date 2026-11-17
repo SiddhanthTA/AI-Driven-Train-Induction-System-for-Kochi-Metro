@@ -31,7 +31,7 @@
 //           </span>
 //         </div>
 //         <div className="font-display font-bold text-white text-base leading-tight tracking-wide">
-//           Fleet Induction
+//           TransitIQ
 //         </div>
 //         <div className="font-display text-depot-muted text-xs tracking-wide">
 //           Decision Support System
@@ -94,7 +94,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
   LayoutDashboard, Map, Droplets, Tag,
-  Bell, History, BarChart2, Brain, ChevronRight, DatabaseZap, Users, ClipboardCheck, Shield
+  Bell, History, BarChart2, Brain, ChevronRight, DatabaseZap
 } from 'lucide-react'
 
 const NAV = [
@@ -107,9 +107,6 @@ const NAV = [
   { to: '/resources', icon: BarChart2, label: 'Resource Utilisation', sub: 'Bay & Track Load' },
   { to: '/explainability', icon: Brain, label: 'Decision Explainability', sub: 'Score Breakdown' },
   { to: '/updates', icon: DatabaseZap, label: 'Data Updates', sub: 'Maximo · IoT · Cleaning' },
-  {to: '/users', icon: Users, label: 'User Management', sub: 'Roles & Access'},
-  {to: '/approvals', icon: ClipboardCheck, label: 'AI Approvals', sub: 'Human Review'},
-  {to: '/security', icon: Shield, label: 'Security Center', sub: 'Access Monitoring'}
 ]
 
 const PERMISSIONS = {
