@@ -1135,104 +1135,108 @@ def evaluate_trains(trains, traffic_level=3):
     # ---------------------------
     TRACK_CAPACITY = 5
 
-    track1 = []
-    track2 = []
-    track3 = []
-    track4 = []
+    track1_service, track2_service = [], []
+    track3_service, track4_service = [], []
+    track3_standby, track4_standby = [], []
 
-    for i, m in enumerate(maintenance):
-        m["track"] = "IBL"
-        m["position"] = i + 1
+    for i, item in enumerate(maintenance):
+        item["track"] = "IBL"
+        item["position"] = i + 1
 
+    # Service trains occupy tracks 1, 2, then 3/4.
     for train in final_service:
-        if len(track1) < TRACK_CAPACITY:
-            track1.append(train)
-        elif len(track2) < TRACK_CAPACITY:
-            track2.append(train)
-        elif len(track3) < TRACK_CAPACITY:
-            track3.append(train)
-        else:
-            track4.append(train)
+        if len(track1_service) < TRACK_CAPACITY:
+            track1_service.append(train)
+        elif len(track2_service) < TRACK_CAPACITY:
+            track2_service.append(train)
+        elif len(track3_service) < TRACK_CAPACITY:
+            track3_service.append(train)
+        elif len(track4_service) < TRACK_CAPACITY:
+            track4_service.append(train)
 
+    # Standby trains share tracks 3/4 only where physical capacity remains.
     for train in final_standby:
-        if len(track3) < TRACK_CAPACITY:
-            track3.append(train)
-        else:
-            track4.append(train)
+        if len(track3_service) + len(track3_standby) < TRACK_CAPACITY:
+            track3_standby.append(train)
+        elif len(track4_service) + len(track4_standby) < TRACK_CAPACITY:
+            track4_standby.append(train)
 
-    def build_service_output(track_list, track_no):
+    def append_output(destination, track_list, track_no, start_position=1):
         for idx, train in enumerate(track_list):
-            decision_explanation = (
-                f"Cleared all safety checks. "
-                f"Mileage: {train['mileage']} km (maintenance risk band considered). "
-                f"Branding contract pressure influenced selection (urgency score: {train['branding']}). "
-                f"AI Predicted Failure Risk: {train['ai_risk']}. "
-                f"Composite score: {train['score']}. "
-                f"Selected for service due to highest operational suitability."
+            mileage = train["mileage"]
+            branding = train["branding"]
+            ai_risk = train["ai_risk"]
+            score = train["score"]
+
+            mileage_label = (
+                "Mileage in safe band" if mileage < SAFE_ZONE else
+                "Mileage in caution band" if mileage < CAUTION_ZONE else
+                "Mileage in elevated band" if mileage < CRITICAL_ZONE else
+                "Mileage close to service limit"
+            )
+            branding_label = (
+                "Branding pressure is high" if branding >= 2.5 else
+                "Branding pressure is moderate" if branding >= 1 else
+                "Branding pressure is low"
+            )
+            ai_label = (
+                "AI risk signal is high" if ai_risk >= 0.6 else
+                "AI risk signal is moderate" if ai_risk >= 0.3 else
+                "AI risk signal is low"
+            )
+            score_label = (
+                "Operational suitability is strong" if score >= 0.7 else
+                "Operational suitability is moderate" if score >= 0.4 else
+                "Operational suitability is lower"
             )
 
-            parking_explanation = (
-                f"Track {track_no}, Position {idx+1}. "
-                f"Estimated shunting moves: {idx}."
-            )
+            explanation = {
+                "mileage_label": mileage_label,
+                "mileage_km": round(mileage),
+                "branding_label": branding_label,
+                "branding_score": round(branding, 2),
+                "ai_label": ai_label,
+                "ai_risk_percent": round(ai_risk * 100),
+                "score_label": score_label,
+                "composite_score": round(score, 3),
+                "selection_label": "Selected for service" if destination is service else "Held as standby",
+                "forced": bool(train.get("forced", False))
+            }
 
-            service.append({
+            position = start_position + idx
+            destination.append({
                 "train": train["train"],
-                "score": train["score"],
+                "score": score,
                 "track": track_no,
-                "position": idx + 1,
-                "shunting_moves": idx,
-                "why": decision_explanation,
-                "parking": parking_explanation
+                "position": position,
+                "shunting_moves": position - 1,
+                "why": (
+                    "Supervisor standby override applied."
+                    if train.get("forced", False) and destination is standby
+                    else f"{mileage_label}; {branding_label}; {ai_label}; {score_label}."
+                ),
+                "decision_factors": explanation,
+                "parking": f"Track {track_no}, position {position}. Estimated shunting moves: {position - 1}."
             })
 
-    def build_standby_output(track_list, track_no):
-        for idx, train in enumerate(track_list):
-            if train.get("forced", False):
-                decision_explanation = (
-                    f"Cleared all safety checks. "
-                    f"Supervisor forced standby override applied."
-                )
-            else:
-                decision_explanation = (
-                    f"Cleared all safety checks. "
-                    f"Mileage: {train['mileage']} km. "
-                    f"Branding contract pressure score : {train['branding']}. "
-                    f"Composite score: {train['score']}. "
-                    f"Assigned to standby based on ranking."
-                )
+    append_output(service, track1_service, 1)
+    append_output(service, track2_service, 2)
+    append_output(service, track3_service, 3)
+    append_output(service, track4_service, 4)
 
-            parking_explanation = (
-                f"Track {track_no}, Position {idx+1}. "
-                f"Estimated shunting moves: {idx}."
-            )
-
-            standby.append({
-                "train": train["train"],
-                "score": train["score"],
-                "track": track_no,
-                "position": idx + 1,
-                "shunting_moves": idx,
-                "why": decision_explanation,
-                "parking": parking_explanation
-            })
+    append_output(standby, track3_standby, 3, len(track3_service) + 1)
+    append_output(standby, track4_standby, 4, len(track4_service) + 1)
 
     global LAST_DEPOT_LAYOUT
     LAST_DEPOT_LAYOUT = {
-        "track1": [t["train"] for t in track1],
-        "track2": [t["train"] for t in track2],
-        "track3": [t["train"] for t in track3],
-        "track4": [t["train"] for t in track4],
+        "track1": [t["train"] for t in track1_service],
+        "track2": [t["train"] for t in track2_service],
+        "track3": [t["train"] for t in track3_service + track3_standby],
+        "track4": [t["train"] for t in track4_service + track4_standby],
         "inspection": [m["train"] for m in maintenance][:IBL_CAPACITY],
         "maintenance_bays": maintenance_bays,
         "maintenance_queue": maintenance_queue
     }
-
-    build_service_output(track1, 1)
-    build_service_output(track2, 2)
-
-    build_standby_output(track3, 3)
-    build_standby_output(track4, 4)
 
     return {
         "service": service,
