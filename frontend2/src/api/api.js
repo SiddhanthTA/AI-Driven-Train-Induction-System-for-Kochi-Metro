@@ -8,25 +8,49 @@ async function request(method, path, body = null, isFormData = false) {
     method,
     headers: isFormData ? {} : { 'Content-Type': 'application/json' },
   }
-  if (body) {
+
+  if (body !== null && body !== undefined) {
     opts.body = isFormData ? body : JSON.stringify(body)
   }
-  const res = await fetch(`${BASE}${path}`, opts)
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || `HTTP ${res.status}`)
+
+  let res
+  try {
+    res = await fetch(`${BASE}${path}`, opts)
+  } catch {
+    throw new Error('Unable to connect to the TransitIQ backend. Check that the service is available and try again.')
   }
-  return res.json()
+
+  if (!res.ok) {
+    let message = `Request failed (${res.status}${res.statusText ? ` ${res.statusText}` : ''})`
+    try {
+      const payload = await res.json()
+      const detail = payload?.detail ?? payload?.message ?? payload?.error
+      if (typeof detail === 'string' && detail.trim()) message = detail
+      else if (Array.isArray(detail)) {
+        message = detail.map(item => item?.msg || JSON.stringify(item)).join('; ')
+      }
+    } catch {
+      // Preserve the HTTP status message for non-JSON error responses.
+    }
+    throw new Error(message)
+  }
+
+  if (res.status === 204) return null
+  const contentType = res.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) return res.json()
+  return res.text()
 }
+
+export const getBackendHealth    = ()             => request('GET',    '/health')
 
 // ─── Trains ──────────────────────────────────────────────
 export const getTrains          = ()             => request('GET',    '/trains')
 export const addTrain           = (data)         => request('POST',   '/trains', data)
 export const resetDatabase      = ()             => request('DELETE', '/reset-database')
-export const populateDatabase   = ()             => request('POST',   '/populate-database')
+export const populateDatabase   = ()             => request('POST',   '/initialize-fleet')
 
 // ─── Induction ───────────────────────────────────────────
-export const generateInduction  = (level = 3)   => request('GET',    `/generate-induction?traffic_level=${level}`)
+export const generateInduction  = (level = 3)   => request('POST',   `/generate-induction?traffic_level=${level}`)
 export const simulateInduction  = (payload)     => request('POST',   '/simulate-induction', payload)
 
 // ─── Overrides / Updates ─────────────────────────────────
