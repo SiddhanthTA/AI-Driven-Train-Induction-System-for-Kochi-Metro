@@ -49,18 +49,19 @@ def home():
     }
 
 
-@app.get("/health")
-def health_check(db: Session = Depends(get_db)):
-    # Confirm both the API process and its database connection are available.
-    db.execute(text("SELECT 1"))
-    return {"status": "ok", "database": "connected"}
-
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    # Confirm both the API process and its database connection are available.
+    db.execute(text("SELECT 1"))
+    return {"status": "ok", "database": "connected"}
 
         
 
