@@ -284,11 +284,13 @@ function TrainBlock({ name, type, position, onClick }) {
   )
 }
 
-function Track({ label, trains, type, capacity = TRACK_CAPACITY }) {
+function Track({ label, trains, type, capacity = TRACK_CAPACITY, serviceNames = [] }) {
+  const serviceSet = new Set(serviceNames)
   const slots = Array.from({ length: capacity }, (_, i) => {
     const train = trains[i]
+    const trainType = serviceSet.has(train) ? 'service' : type
     return train
-      ? { name: train, type, position: i + 1 }
+      ? { name: train, type: trainType, position: i + 1 }
       : { name: '', type: 'empty', position: i + 1 }
   })
 
@@ -437,8 +439,8 @@ export default function DepotLayout() {
     return [
       { label: 'Track 1 — Service', trains: layout.track1 || [], type: 'service', capacity: 5 },
       { label: 'Track 2 — Service', trains: layout.track2 || [], type: 'service', capacity: 5 },
-      { label: 'Track 3 — Standby', trains: layout.track3 || [], type: 'standby', capacity: 5 },
-      { label: 'Track 4 — Standby', trains: layout.track4 || [], type: 'standby', capacity: 5 },
+      { label: 'Track 3 — Shared', trains: layout.track3 || [], type: 'standby', capacity: 5, serviceNames: layout.track3_service || [] },
+      { label: 'Track 4 — Shared', trains: layout.track4 || [], type: 'standby', capacity: 5, serviceNames: layout.track4_service || [] },
       { label: 'Inspection Bay Line (IBL)', trains: layout.inspection || [], type: 'maintenance', capacity: 10 },
     ]
   }
@@ -501,6 +503,19 @@ export default function DepotLayout() {
             {getTracks().map((track, i) => (
               <Track key={i} {...track} />
             ))}
+            {(layout.standby_overflow || []).length > 0 && (
+              <div className="panel p-4">
+                <div className="section-label mb-3">Standby Overflow — Holding Area</div>
+                <div className="grid grid-cols-5 gap-2">
+                  {layout.standby_overflow.map((name, i) => (
+                    <TrainBlock key={name} name={name} type="standby" position={i + 1} />
+                  ))}
+                </div>
+                <p className="font-mono text-2xs text-depot-muted mt-3">
+                  These trains remain assigned as standby but are outside the four modeled tracks.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4">
