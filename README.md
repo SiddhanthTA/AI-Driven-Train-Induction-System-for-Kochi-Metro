@@ -353,3 +353,16 @@ B.E. Computer Science and Engineering
 ---
 
 ⭐ If you found this project useful, consider giving the repository a star.
+
+
+
+Backend Commands: 
+cd D:\Projects\Kmrl\backend
+.\venv\Scripts\Activate.ps1
+uvicorn main:app --reload
+
+Frontend Commands:
+cd D:\Projects\Kmrl\frontend2
+npm run dev
+
+Login Credentials : ADMIN001 Pass : admin123
