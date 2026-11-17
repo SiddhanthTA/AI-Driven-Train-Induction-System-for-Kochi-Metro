@@ -39,13 +39,14 @@ function TrackLoadGrid({ layout }) {
   const tracks = [
     { key: 'track1', label: 'Track 1', cap: 5, type: 'Service' },
     { key: 'track2', label: 'Track 2', cap: 5, type: 'Service' },
-    { key: 'track3', label: 'Track 3', cap: 5, type: 'Standby' },
-    { key: 'track4', label: 'Track 4', cap: 10, type: 'Standby' },
+    { key: 'track3', label: 'Track 3', cap: 5, type: 'Shared' },
+    { key: 'track4', label: 'Track 4', cap: 5, type: 'Shared' },
     { key: 'inspection', label: 'IBL',  cap: 10, type: 'Maintenance' },
   ]
   const typeColors = {
     Service:     '#00e676',
     Standby:     '#ffd740',
+    Shared:      '#ffd740',
     Maintenance: '#ff1744',
   }
 
@@ -124,9 +125,9 @@ export default function ResourceUtilisation() {
       {/* KPI Grid */}
       <div className="grid grid-cols-2 gap-3">
         <MetricBlock
-          label="Cleaning Bays Used"
-          value={util?.cleaning_bays_used ?? '—'}
-          unit="bays"
+          label="Trains Scheduled for Cleaning"
+          value={util?.cleaning_trains_scheduled ?? '—'}
+          unit="trains"
           icon={Layers}
           color="#00c2ff"
           bar
@@ -136,12 +137,12 @@ export default function ResourceUtilisation() {
         <MetricBlock
           label="Active Tracks"
           value={util?.active_tracks ?? '—'}
-          unit="/ 5"
+          unit="/ 4"
           icon={GitBranch}
           color="#00e676"
           bar
           barMax={5}
-          sub="Tracks with at least one train assigned (incl. IBL)"
+          sub="Physical tracks with at least one train assigned"
         />
         <MetricBlock
           label="Depot Occupancy"
@@ -151,7 +152,7 @@ export default function ResourceUtilisation() {
           color={occupancyPct > 90 ? '#ff1744' : occupancyPct > 70 ? '#ffd740' : '#00e676'}
           bar
           barMax={100}
-          sub={`${occupancyPct}% of total depot slot capacity occupied`}
+          sub={`${util?.occupied_slots ?? '—'} of ${util?.total_slots ?? '—'} physical track and inspection slots occupied`}
         />
         <MetricBlock
           label="Shunting Complexity Index"
@@ -172,10 +173,8 @@ export default function ResourceUtilisation() {
         <div className="space-y-2">
           {[
             {
-              ok: (util?.cleaning_bays_used ?? 0) <= 4,
-              text: (util?.cleaning_bays_used ?? 0) <= 4
-                ? `Cleaning bays within capacity. ${5 - (util?.cleaning_bays_used ?? 0)} bays available.`
-                : 'Cleaning bay capacity at limit. Consider deferring non-critical cleans.'
+              ok: true,
+              text: `${util?.cleaning_trains_scheduled ?? 0} trains are scheduled for cleaning in the latest induction cycle.`
             },
             {
               ok: occupancyPct < 90,
@@ -188,6 +187,12 @@ export default function ResourceUtilisation() {
               text: shuntingVal <= 2
                 ? `Shunting index ${shuntingVal} — track loads are balanced, minimal repositioning required.`
                 : `Shunting index ${shuntingVal} — imbalanced track allocation. Morning turnout may require repositioning.`
+            },
+            {
+              ok: (util?.standby_overflow_count ?? 0) === 0,
+              text: (util?.standby_overflow_count ?? 0) === 0
+                ? 'All standby trains fit within the modeled track positions.'
+                : `${util.standby_overflow_count} standby trains are assigned to the separate overflow holding area.`
             },
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-2">
