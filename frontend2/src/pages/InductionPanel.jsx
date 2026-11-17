@@ -268,11 +268,23 @@ function OverrideModal({ onClose }) {
 // ─── Main Page ────────────────────────────────────────────
 export default function InductionPanel() {
   const [traffic, setTraffic]       = useState(3)
-  const [result, setResult]         = useState(() => {\n    try { return JSON.parse(localStorage.getItem('transitiq:last-induction') || 'null') } catch { return null }\n  })
+  const [result, setResult]         = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('transitiq:last-induction') || 'null')
+    } catch {
+      return null
+    }
+  })
   const [simResult, setSimResult]   = useState(null)
   const [loading, setLoading]       = useState('')
   const [toast, setToast]           = useState(null)
-  const [simMode, setSimMode]       = useState(false)\n\n  useEffect(() => {\n    if (result) localStorage.setItem('transitiq:last-induction', JSON.stringify(result))\n  }, [result])
+  const [simMode, setSimMode]       = useState(false)
+
+  useEffect(() => {
+    if (result) {
+      localStorage.setItem('transitiq:last-induction', JSON.stringify(result))
+    }
+  }, [result])
   const [showOverride, setShowOverride] = useState(false)
 
   const showToast = (msg, ok = true) => {
