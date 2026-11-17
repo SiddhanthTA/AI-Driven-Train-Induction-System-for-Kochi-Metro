@@ -1,5 +1,5 @@
 // src/pages/InductionPanel.jsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   generateInduction, supervisorUpdate
 } from '../api/api'
@@ -77,7 +77,6 @@ function TrainRow({ train, type }) {
             <span className="text-depot-muted">—</span>
           )}
         </td>
-        <td>{train.forced && <Badge variant="forced">Forced</Badge>}</td>
         <td>
           <button className="text-depot-muted hover:text-depot-accent transition-colors">
             {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -86,19 +85,30 @@ function TrainRow({ train, type }) {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} className="bg-depot-bg px-4 py-3">
-            <div className="flex items-start gap-2 text-xs">
-              <Info size={12} className="text-depot-accent mt-0.5 flex-shrink-0" />
-              <p className="font-body text-depot-muted leading-relaxed">
-                {train.why || train.parking || 'No explanation available.'}
-              </p>
-            </div>
-            {train.parking && train.why && (
-              <div className="flex items-start gap-2 text-xs mt-2">
-                <Info size={12} className="text-depot-muted mt-0.5 flex-shrink-0" />
-                <p className="font-body text-depot-muted leading-relaxed">{train.parking}</p>
+          <td colSpan={5} className="bg-depot-bg px-4 py-3">
+            {train.decision_factors ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  ['Mileage', train.decision_factors.mileage_label, `${train.decision_factors.mileage_km?.toLocaleString('en-IN')} km`],
+                  ['Branding', train.decision_factors.branding_label, `Score ${train.decision_factors.branding_score}`],
+                  ['AI risk signal', train.decision_factors.ai_label, `${train.decision_factors.ai_risk_percent}%`],
+                  ['Overall score', train.decision_factors.score_label, train.decision_factors.composite_score?.toFixed(3)]
+                ].map(([label, description, value]) => (
+                  <div key={label} className="rounded-md border border-depot-border bg-depot-panel px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-2xs uppercase tracking-wider text-depot-muted">{label}</span>
+                      <span className="font-mono text-xs text-depot-white">{value}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-depot-text">{description}</p>
+                  </div>
+                ))}
               </div>
+            ) : (
+              <p className="font-body text-xs text-depot-muted leading-relaxed">
+                {train.why || 'No explanation available.'}
+              </p>
             )}
+            {train.parking && <p className="mt-2 text-xs text-depot-muted">{train.parking}</p>}
           </td>
         </tr>
       )}
@@ -136,7 +146,6 @@ function Panel({ title, variant, trains }) {
                 {variant !== 'maintenance' ? <th>Score</th> : <th>Category</th>}
                 <th>Track</th>
                 {variant !== 'maintenance' ? <th>Shunts</th> : <th></th>}
-                <th>Flags</th>
                 <th></th>
               </tr>
             </thead>
@@ -259,11 +268,11 @@ function OverrideModal({ onClose }) {
 // ─── Main Page ────────────────────────────────────────────
 export default function InductionPanel() {
   const [traffic, setTraffic]       = useState(3)
-  const [result, setResult]         = useState(null)
+  const [result, setResult]         = useState(() => {\n    try { return JSON.parse(localStorage.getItem('transitiq:last-induction') || 'null') } catch { return null }\n  })
   const [simResult, setSimResult]   = useState(null)
   const [loading, setLoading]       = useState('')
   const [toast, setToast]           = useState(null)
-  const [simMode, setSimMode]       = useState(false)
+  const [simMode, setSimMode]       = useState(false)\n\n  useEffect(() => {\n    if (result) localStorage.setItem('transitiq:last-induction', JSON.stringify(result))\n  }, [result])
   const [showOverride, setShowOverride] = useState(false)
 
   const showToast = (msg, ok = true) => {
