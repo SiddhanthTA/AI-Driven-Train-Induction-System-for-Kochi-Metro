@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
-import BackendStatus from '../ui/BackendStatus'
 
 const PAGE_TITLES = {
   '/':               { title: 'Induction Control Panel',      sub: 'Nightly fleet induction decision system' },
@@ -45,7 +44,7 @@ export default function TopBar() {
       {/* Left: page title */}
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="font-display font-bold text-lg leading-tight tracking-wide"
+          <h1 className={`font-display font-bold leading-tight tracking-wide ${pathname === '/' ? 'text-2xl' : 'text-lg'}`}
             style={{ color: 'var(--depot-white)' }}>
             {info.title}
           </h1>
@@ -58,26 +57,25 @@ export default function TopBar() {
 
       {/* Right: status + user + theme toggle + clock */}
 <div className="flex items-center gap-5">
-  <BackendStatus />
 
   {/* User Info */}
   <div
-    className="flex items-center gap-3 px-3 py-1 rounded-sm border"
+    className="flex items-center gap-3 px-4 py-2 rounded-lg border shadow-sm"
     style={{
       borderColor: 'var(--depot-border)',
-      background: 'var(--depot-dim)',
+      background: 'var(--depot-card)',
     }}
   >
     <div>
       <div
-        className="font-mono text-xs font-bold"
+        className="font-display text-sm font-semibold tracking-wide"
         style={{ color: 'var(--depot-white)' }}
       >
         {user?.id}
       </div>
 
       <div
-        className="text-xs"
+        className="text-[11px] uppercase tracking-wider"
         style={{ color: 'var(--depot-muted)' }}
       >
         {user?.role}
@@ -86,11 +84,8 @@ export default function TopBar() {
 
     <button
       onClick={logout}
-      className="btn btn-danger"
-      style={{
-        padding: '4px 8px',
-        fontSize: '10px',
-      }}
+      className="rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-red-500/10"
+      style={{ borderColor: 'rgba(255,23,68,0.45)', color: '#ff5b70' }}
     >
       Logout
     </button>
