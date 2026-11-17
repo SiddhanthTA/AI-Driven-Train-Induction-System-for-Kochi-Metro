@@ -1155,11 +1155,16 @@ def evaluate_trains(trains, traffic_level=3):
             track4_service.append(train)
 
     # Standby trains share tracks 3/4 only where physical capacity remains.
+    # Any remaining standby trains are explicitly assigned to an overflow
+    # holding area rather than silently disappearing from the induction result.
+    standby_overflow = []
     for train in final_standby:
         if len(track3_service) + len(track3_standby) < TRACK_CAPACITY:
             track3_standby.append(train)
         elif len(track4_service) + len(track4_standby) < TRACK_CAPACITY:
             track4_standby.append(train)
+        else:
+            standby_overflow.append(train)
 
     def append_output(destination, track_list, track_no, start_position=1):
         for idx, train in enumerate(track_list):
@@ -1226,6 +1231,7 @@ def evaluate_trains(trains, traffic_level=3):
 
     append_output(standby, track3_standby, 3, len(track3_service) + 1)
     append_output(standby, track4_standby, 4, len(track4_service) + 1)
+    append_output(standby, standby_overflow, "Overflow holding area")
 
     global LAST_DEPOT_LAYOUT
     LAST_DEPOT_LAYOUT = {
@@ -1235,7 +1241,8 @@ def evaluate_trains(trains, traffic_level=3):
         "track4": [t["train"] for t in track4_service + track4_standby],
         "inspection": [m["train"] for m in maintenance][:IBL_CAPACITY],
         "maintenance_bays": maintenance_bays,
-        "maintenance_queue": maintenance_queue
+        "maintenance_queue": maintenance_queue,
+        "standby_overflow": [t["train"] for t in standby_overflow]
     }
 
     return {
