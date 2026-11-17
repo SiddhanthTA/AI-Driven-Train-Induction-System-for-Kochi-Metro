@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Activity, AlertCircle, LoaderCircle } from 'lucide-react'
+import { Activity, AlertCircle, Loader2 } from 'lucide-react'
 import { getBackendHealth } from '../../api/api'
 
 export default function BackendStatus() {
@@ -36,7 +36,7 @@ export default function BackendStatus() {
     checking: {
       label: 'CHECKING BACKEND',
       color: 'var(--depot-muted)',
-      Icon: LoaderCircle,
+      Icon: Loader2,
       className: 'animate-spin',
     },
     online: {
