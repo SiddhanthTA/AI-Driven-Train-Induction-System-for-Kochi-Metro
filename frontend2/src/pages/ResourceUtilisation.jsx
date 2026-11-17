@@ -131,8 +131,8 @@ export default function ResourceUtilisation() {
           icon={Layers}
           color="#00c2ff"
           bar
-          barMax={5}
-          sub="Active cleaning bays from last induction cycle"
+          barMax={25}
+          sub="Train assignments marked for cleaning in the latest induction cycle"
         />
         <MetricBlock
           label="Active Tracks"
@@ -141,7 +141,7 @@ export default function ResourceUtilisation() {
           icon={GitBranch}
           color="#00e676"
           bar
-          barMax={5}
+          barMax={4}
           sub="Physical tracks with at least one train assigned"
         />
         <MetricBlock
