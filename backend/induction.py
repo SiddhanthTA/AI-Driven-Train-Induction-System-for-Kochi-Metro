@@ -1058,22 +1058,20 @@ def evaluate_trains(trains, traffic_level=3):
     # ---------------------------
     # STEP 3: TRAFFIC-BASED SERVICE SPLIT
     # ---------------------------
-    demand_map = {
-        1: 0.4,
-        2: 0.55,
-        3: 0.7,
-        4: 0.85,
-        5: 0.95
+    # Target service fleet sizes for each traffic level.
+    # Keep at least two eligible trains in standby whenever the eligible
+    # fleet contains at least two trains.
+    service_target_map = {
+        1: 7,   # Very Low
+        2: 9,   # Low
+        3: 12,  # Moderate
+        4: 16,  # High
+        5: 17   # Peak
     }
 
-    percentage = demand_map[traffic_level]
-    service_count = round(len(scored) * percentage)
-
-    if len(scored) > 1 and service_count >= len(scored):
-        service_count = len(scored) - 1
-
-    if service_count == 0 and len(scored) > 0:
-        service_count = 1
+    requested_service_count = service_target_map[traffic_level]
+    maximum_service_count = max(0, len(scored) - 2)
+    service_count = min(requested_service_count, maximum_service_count)
 
     # ---------------------------
     # STEP 4: INITIAL CATEGORIZATION
