@@ -139,11 +139,16 @@ def generate_induction(
 
     from simulation_engine import advance_one_day
 
+    active_maintenance_names = {
+        item["train"] for item in result["maintenance_bays"]
+    }
+
     advance_one_day(
         trains,
         result["service"],
         result["standby"],
-        result["maintenance"]
+        result["maintenance"],
+        active_maintenance_names=active_maintenance_names
     )
 
     latest_snapshots = db.query(TrainDecisionSnapshot).filter(
@@ -208,8 +213,22 @@ async def upload_branding(file: UploadFile = File(...), db: Session = Depends(ge
 
 @app.delete("/reset-database")
 def reset_database(db: Session = Depends(get_db)):
+    global SIMULATION_DAY
+
+    # Clear dependent history as well as the active fleet so a fresh
+    # initialization does not inherit records from the previous simulation.
+    db.query(models.TrainDecisionSnapshot).delete(synchronize_session=False)
+    db.query(models.InductionLog).delete(synchronize_session=False)
     crud.delete_all_trains(db)
-    return {"message": "All trains deleted successfully"}
+
+    SIMULATION_DAY = 0
+    induction.LAST_CLEANING_PLAN = []
+    induction.LAST_DEPOT_LAYOUT = {}
+
+    from simulation_engine import MAINTENANCE_MEMORY
+    MAINTENANCE_MEMORY.clear()
+
+    return {"message": "Fleet, induction history, snapshots, and simulation state reset successfully"}
 
 from pydantic import BaseModel
 
@@ -543,19 +562,23 @@ def get_decision_breakdown(train_name: str, db: Session = Depends(get_db)):
 @app.get("/resource-utilization")
 def resource_utilization():
 
-    cleaning_used = len(induction.LAST_CLEANING_PLAN)
-
-    layout = induction.LAST_DEPOT_LAYOUT
-
-    total_slots = 5 * 4
-    occupied = sum(len(v) for v in layout.values()) if layout else 0
-
-    active_tracks = sum(1 for v in layout.values() if len(v) > 0) if layout else 0
+    layout = induction.LAST_DEPOT_LAYOUT or {}
+    track_keys = ("track1", "track2", "track3", "track4")
+    track_capacity = 5 * len(track_keys)
+    inspection_capacity = induction.IBL_CAPACITY
+    occupied_tracks = sum(len(layout.get(key, [])) for key in track_keys)
+    occupied_inspection = len(layout.get("inspection", []))
+    total_slots = track_capacity + inspection_capacity
+    occupied_slots = occupied_tracks + occupied_inspection
+    active_tracks = sum(1 for key in track_keys if layout.get(key))
 
     return {
-        "cleaning_bays_used": cleaning_used,
+        "cleaning_trains_scheduled": len(induction.LAST_CLEANING_PLAN),
         "active_tracks": active_tracks,
-        "occupancy_ratio": occupied / total_slots if total_slots else 0
+        "occupancy_ratio": occupied_slots / total_slots if total_slots else 0,
+        "occupied_slots": occupied_slots,
+        "total_slots": total_slots,
+        "standby_overflow_count": len(layout.get("standby_overflow", []))
     }
 
 @app.get("/depot-summary")
@@ -583,7 +606,9 @@ def shunting_index():
     if not layout:
         return {"shunting_complexity_index": 0}
 
-    sizes = [len(v) for v in layout.values()]
+    # Shunting compares physical track loads only; inspection, maintenance
+    # bays, queues, and overflow holding are not tracks.
+    sizes = [len(layout.get(key, [])) for key in ("track1", "track2", "track3", "track4")]
 
     if not sizes:
         return {"shunting_complexity_index": 0}
