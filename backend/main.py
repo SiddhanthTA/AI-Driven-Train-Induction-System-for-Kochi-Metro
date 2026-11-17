@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import models, schemas, crud, induction
 from database import engine, SessionLocal, Base
 from models import TrainDecisionSnapshot
@@ -47,6 +48,13 @@ def home():
         "message": "KMRL TransitIQ Backend Running"
     }
 
+
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    # Confirm both the API process and its database connection are available.
+    db.execute(text("SELECT 1"))
+    return {"status": "ok", "database": "connected"}
+
 def get_db():
     db = SessionLocal()
     try:
@@ -69,7 +77,7 @@ from fastapi import Query
 from datetime import datetime
 import json
 
-@app.get("/generate-induction")
+@app.post("/generate-induction")
 def generate_induction(
     traffic_level: int = Query(3, ge=1, le=5),
     db: Session = Depends(get_db)
@@ -451,6 +459,10 @@ def simulate_induction(input: SimulationInput, db: Session = Depends(get_db)):
 def get_alerts(db: Session = Depends(get_db)):
 
     trains = crud.get_trains(db)
+
+    # Avoid percentage calculations when the fleet is empty.
+    if not trains:
+        return []
 
     alerts = []
 
