@@ -1239,6 +1239,8 @@ def evaluate_trains(trains, traffic_level=3):
         "track2": [t["train"] for t in track2_service],
         "track3": [t["train"] for t in track3_service + track3_standby],
         "track4": [t["train"] for t in track4_service + track4_standby],
+        "track3_service": [t["train"] for t in track3_service],
+        "track4_service": [t["train"] for t in track4_service],
         "inspection": [m["train"] for m in maintenance][:IBL_CAPACITY],
         "maintenance_bays": maintenance_bays,
         "maintenance_queue": maintenance_queue,
