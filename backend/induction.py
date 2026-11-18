@@ -743,6 +743,7 @@ def evaluate_trains(trains, traffic_level=3):
     service = []
     standby = []
     maintenance = []
+    cleaning = []
 
     # ---------------------------
     # STEP 1: HARD SAFETY FILTER
@@ -800,176 +801,45 @@ def evaluate_trains(trains, traffic_level=3):
             "service": [],
             "standby": [],
             "maintenance": maintenance,
+            "cleaning": cleaning,
             "maintenance_bays": maintenance_bays,
-            "maintenance_queue": maintenance_queue
+            "maintenance_queue": maintenance_queue,
+            "cleaning_bays": cleaning_bays,
+            "cleaning_queue": cleaning_queue
         }
 
     eligible_map = {t.name: t for t in eligible}
 
-    # ---------------------------
-    # STEP 2: ADVANCED CLEANING MODEL
-    # ---------------------------
-
-    BASE_FLEET = 25
+    # Separate cleaning from technical maintenance. Capacity is a logical
+    # simulation assumption, not a verified KMRL facility count.
     BASE_CLEANING_BAYS = 3
-
-    fleet_size = len(eligible)
-    effective_bays = max(1, round(BASE_CLEANING_BAYS * (fleet_size / BASE_FLEET)))
-
-    critical = []
-    dirty = []
-    mild = []
-    clean = []
-
-    for train in eligible:
-        d = train.days_since_cleaning
-
-        if d >= 14:
-            critical.append(train)
-        elif d >= 10:
-            dirty.append(train)
-        elif d >= 5:
-            mild.append(train)
-        else:
-            clean.append(train)
-
-    cleaning_today = sorted(
-        critical,
-        key=lambda t: (-t.days_since_cleaning)
-    )
-
-    remaining_capacity = max(0, effective_bays - len(cleaning_today))
-
-    dirty_count = len(dirty) + len(critical)
-    total_count = len(eligible)
-
-    if total_count == 0:
-        hygiene_pressure = 1
-    else:
-        dirty_ratio = dirty_count / total_count
-
-        if dirty_ratio >= 0.6:
-            hygiene_pressure = 1.3
-        elif dirty_ratio >= 0.4:
-            hygiene_pressure = 1.15
-        elif dirty_ratio >= 0.2:
-            hygiene_pressure = 1.05
-        else:
-            hygiene_pressure = 1
-
-    aggression_factor = {
-        1: 1.3,
-        2: 1.1,
-        3: 1.0,
-        4: 0.8,
-        5: 0.6
-    }[traffic_level]
-
-    adjusted_aggression = aggression_factor * hygiene_pressure
-    additional_slots = max(0, round(remaining_capacity * adjusted_aggression))
-
-    dirty_sorted = sorted(
-        dirty,
-        key=lambda t: (-t.days_since_cleaning)
-    )
-
-    cleaning_today.extend(dirty_sorted[:additional_slots])
-
-    global LAST_CLEANING_PLAN
-    LAST_CLEANING_PLAN = [t.name for t in cleaning_today]
-
-    cleaning_names = {t.name for t in cleaning_today}
-
-    new_eligible = []
-
-    for train in eligible:
-        if train.name in cleaning_names:
-            d = train.days_since_cleaning
-            if d >= 14:
-                level = "critical"
-            elif d >= 10:
-                level = "dirty"
-            elif d >= 5:
-                level = "mild"
-            else:
-                level = "routine"
-
-            maintenance.append({
-                "train": train.name,
-                "category": "cleaning",
-                "why": f"Cleaning scheduled ({level} hygiene level, {d} days since last cleaning)"
-            })
-        else:
-            new_eligible.append(train)
-
-    eligible = new_eligible
-    eligible_map = {t.name: t for t in eligible}
+    cleaning_capacity = max(1, round(BASE_CLEANING_BAYS * (len(trains) / BASE_FLEET)))
     all_trains_map = {t.name: t for t in trains}
-
-    if not eligible and not maintenance:
-        maintenance_bays, maintenance_queue = allocate_maintenance_bays(
-            maintenance,
-            all_trains_map
-        )
-        return {
-            "service": [],
-            "standby": [],
-            "maintenance": maintenance,
-            "maintenance_bays": maintenance_bays,
-            "maintenance_queue": maintenance_queue
-        }
-
-    # ---------------------------
-    # STEP X: MAINTENANCE CAPACITY MODEL
-    # ---------------------------
-
-    fleet_size = len(eligible) + len(maintenance)
-    maintenance_capacity = max(1, round(BASE_MAINTENANCE_CAPACITY * (fleet_size / BASE_FLEET)))
-
-    hard_maintenance = []
-    soft_maintenance = []
-
-    for m in maintenance:
-        if m["category"] == "cleaning" and "critical" in m["why"]:
-            hard_maintenance.append(m)
-        elif m["category"] == "cleaning":
-            soft_maintenance.append(m)
-        else:
-            hard_maintenance.append(m)
-
-    available_slots = maintenance_capacity - len(hard_maintenance)
-
-    if available_slots < 0:
-        available_slots = 0
-
-    soft_maintenance_sorted = sorted(
-        soft_maintenance,
-        key=lambda m: all_trains_map[m["train"]].days_since_cleaning,
-        reverse=True
+    cleaning_candidates = sorted(
+        [t for t in eligible if t.days_since_cleaning >= 10],
+        key=lambda t: (-t.days_since_cleaning, t.name)
     )
-
-    accepted_soft = soft_maintenance_sorted[:available_slots]
-    overflow_soft = soft_maintenance_sorted[available_slots:]
-
-    overflow_names = {m["train"] for m in overflow_soft}
-
-    overflow_trains = [
-        t for t in trains if t.name in overflow_names
-    ]
-
-    eligible.extend(overflow_trains)
+    cleaning_names = {t.name for t in cleaning_candidates}
+    for train in cleaning_candidates:
+        level = 'critical' if train.days_since_cleaning >= 14 else 'dirty'
+        cleaning.append({
+            'train': train.name,
+            'category': 'cleaning',
+            'why': f'Cleaning scheduled ({level} hygiene level, {train.days_since_cleaning} days since last cleaning)'
+        })
+    eligible = [t for t in eligible if t.name not in cleaning_names]
     eligible_map = {t.name: t for t in eligible}
-
-    maintenance = hard_maintenance + accepted_soft
-
-    # ---------------------------
-    # NEW: MAINTENANCE BAY ALLOCATION
-    # ---------------------------
-    maintenance_bays, maintenance_queue = allocate_maintenance_bays(
-        maintenance,
-        all_trains_map
-    )
-
+    global LAST_CLEANING_PLAN
+    LAST_CLEANING_PLAN = [item['train'] for item in cleaning]
+    cleaning_bays, cleaning_queue = [], []
+    for idx, item in enumerate(cleaning):
+        train_obj = all_trains_map[item['train']]
+        reason = f'Cleaning delay: {train_obj.days_since_cleaning} days.'
+        if idx < cleaning_capacity:
+            cleaning_bays.append({'bay': idx + 1, 'train': item['train'], 'maintenance_reason': item['why'], 'placement_reason': reason})
+        else:
+            cleaning_queue.append({'train': item['train'], 'maintenance_reason': item['why'], 'placement_reason': f'Waiting for one of {cleaning_capacity} simulated cleaning bays.'})
+    maintenance_bays, maintenance_queue = allocate_maintenance_bays(maintenance, all_trains_map)
     branding_urgency = {}
 
     for train in eligible:
@@ -1244,6 +1114,8 @@ def evaluate_trains(trains, traffic_level=3):
         "inspection": [m["train"] for m in maintenance][:IBL_CAPACITY],
         "maintenance_bays": maintenance_bays,
         "maintenance_queue": maintenance_queue,
+        "cleaning_bays": cleaning_bays,
+        "cleaning_queue": cleaning_queue,
         "standby_overflow": [t["train"] for t in standby_overflow]
     }
 
@@ -1251,8 +1123,11 @@ def evaluate_trains(trains, traffic_level=3):
         "service": service,
         "standby": standby,
         "maintenance": maintenance,
+        "cleaning": cleaning,
         "maintenance_bays": maintenance_bays,
-        "maintenance_queue": maintenance_queue
+        "maintenance_queue": maintenance_queue,
+        "cleaning_bays": cleaning_bays,
+        "cleaning_queue": cleaning_queue
     }
 
 
