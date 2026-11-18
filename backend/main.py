@@ -105,6 +105,9 @@ def generate_induction(
     for t in result["maintenance"]:
         decision_map[t["train"]] = "maintenance"
 
+    for t in result.get("cleaning", []):
+        decision_map[t["train"]] = "cleaning"
+
     for train in trains:
         snapshot = TrainDecisionSnapshot(
             train_name=train.name,
@@ -127,7 +130,10 @@ def generate_induction(
         traffic_level=traffic_level,
         service_trains=json.dumps([t["train"] for t in result["service"]]),
         standby_trains=json.dumps([t["train"] for t in result["standby"]]),
-        maintenance_trains=json.dumps([t["train"] for t in result["maintenance"]])
+        # Preserve the existing audit field for both categories withheld from service.
+        maintenance_trains=json.dumps(
+            [t["train"] for t in result["maintenance"] + result.get("cleaning", [])]
+        )
     )
 
     db.add(log_entry)
@@ -142,13 +148,18 @@ def generate_induction(
     active_maintenance_names = {
         item["train"] for item in result["maintenance_bays"]
     }
+    active_cleaning_names = {
+        item["train"] for item in result.get("cleaning_bays", [])
+    }
 
     advance_one_day(
         trains,
         result["service"],
         result["standby"],
         result["maintenance"],
-        active_maintenance_names=active_maintenance_names
+        active_maintenance_names=active_maintenance_names,
+        cleaning_list=result.get("cleaning", []),
+        active_cleaning_names=active_cleaning_names
     )
 
     latest_snapshots = db.query(TrainDecisionSnapshot).filter(
@@ -225,8 +236,9 @@ def reset_database(db: Session = Depends(get_db)):
     induction.LAST_CLEANING_PLAN = []
     induction.LAST_DEPOT_LAYOUT = {}
 
-    from simulation_engine import MAINTENANCE_MEMORY
+    from simulation_engine import MAINTENANCE_MEMORY, CLEANING_MEMORY
     MAINTENANCE_MEMORY.clear()
+    CLEANING_MEMORY.clear()
 
     return {"message": "Fleet, induction history, snapshots, and simulation state reset successfully"}
 
@@ -434,8 +446,11 @@ def initialize_fleet(db: Session = Depends(get_db)):
 @app.get("/cleaning-plan")
 def get_cleaning_plan():
     from induction import LAST_CLEANING_PLAN
+    layout = induction.LAST_DEPOT_LAYOUT or {}
     return {
-        "cleaning_trains": LAST_CLEANING_PLAN
+        "cleaning_trains": LAST_CLEANING_PLAN,
+        "cleaning_bays": layout.get("cleaning_bays", []),
+        "cleaning_queue": layout.get("cleaning_queue", [])
     }
 
 @app.get("/depot-layout")
