@@ -730,6 +730,7 @@ def allocate_maintenance_bays(maintenance, all_trains_map):
     return maintenance_bays, maintenance_queue
 
 def evaluate_trains(trains, traffic_level=3):
+    global LAST_CLEANING_PLAN, LAST_DEPOT_LAYOUT
 
     HARD_MAINTENANCE_LIMIT = 30000
 
@@ -832,7 +833,6 @@ def evaluate_trains(trains, traffic_level=3):
         })
     eligible = [t for t in eligible if t.name not in cleaning_names]
     eligible_map = {t.name: t for t in eligible}
-    global LAST_CLEANING_PLAN
     LAST_CLEANING_PLAN = [item['train'] for item in cleaning]
     cleaning_bays, cleaning_queue = [], []
     for idx, item in enumerate(cleaning):
