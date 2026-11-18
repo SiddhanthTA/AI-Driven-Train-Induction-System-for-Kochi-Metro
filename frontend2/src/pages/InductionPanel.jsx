@@ -1,7 +1,7 @@
 // src/pages/InductionPanel.jsx
 import { useEffect, useState } from 'react'
 import {
-  generateInduction, supervisorUpdate
+  generateInduction, supervisorUpdate, getTrains
 } from '../api/api'
 import { Badge, StatusDot, Spinner, EmptyState } from '../components/ui/index'
 import {
@@ -104,9 +104,22 @@ function TrainRow({ train, type }) {
                 ))}
               </div>
             ) : (
-              <p className="font-body text-xs text-depot-muted leading-relaxed">
-                {train.why || 'No explanation available.'}
-              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  ['Decision reason', train.why || 'No explanation available.', train.category || type],
+                  ['Assignment', type === 'cleaning' ? 'Cleaning facility' : 'Inspection / maintenance', type === 'cleaning' ? 'CLEANING' : 'TECHNICAL'],
+                  ['Service status', 'Withheld from passenger service', 'NOT IN SERVICE'],
+                  ['Decision category', train.category || type, 'SYSTEM DECISION']
+                ].map(([label, description, value]) => (
+                  <div key={label} className="rounded-md border border-depot-border bg-depot-panel px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-2xs uppercase tracking-wider text-depot-muted">{label}</span>
+                      <span className="font-mono text-xs text-depot-white">{value}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-depot-text">{description}</p>
+                  </div>
+                ))}
+              </div>
             )}
             {train.parking && <p className="mt-2 text-xs text-depot-muted">{train.parking}</p>}
           </td>
@@ -168,13 +181,31 @@ function OverrideModal({ onClose }) {
   const [status, setStatus] = useState('standby')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [trains, setTrains] = useState([])
+  const [trainsLoading, setTrainsLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    getTrains()
+      .then(data => { if (mounted) setTrains(Array.isArray(data) ? data : []) })
+      .catch(error => { if (mounted) setMsg({ ok: false, text: error.message }) })
+      .finally(() => { if (mounted) setTrainsLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
+  const matchingTrains = trains.filter(train =>
+    train.name?.toLowerCase().includes(trainName.trim().toLowerCase())
+  )
+  const selectedTrain = trains.find(train =>
+    train.name?.toLowerCase() === trainName.trim().toLowerCase()
+  )
 
   const submit = async () => {
-    if (!trainName.trim()) return
+    if (!selectedTrain || loading || trainsLoading) return
     setLoading(true)
     setMsg(null)
     try {
-      await supervisorUpdate({ train_name: trainName.trim(), override_status: status })
+      await supervisorUpdate({ train_name: selectedTrain.name, override_status: status })
       setMsg({ ok: true, text: `Override applied to ${trainName}` })
       setTrainName('')
     } catch (e) {
@@ -211,17 +242,30 @@ function OverrideModal({ onClose }) {
         </div>
 
         <div className="space-y-4">
-          <div>
+          <div className="relative">
             <label className="section-label mb-1.5 block">Train ID</label>
             <input
               type="text"
               value={trainName}
-              onChange={e => setTrainName(e.target.value)}
+              onChange={e => { setTrainName(e.target.value); setMsg(null) }}
               placeholder="e.g. T-5"
               autoFocus
               className="w-full bg-depot-bg border border-depot-border rounded-sm px-3 py-2.5 font-mono text-sm focus:outline-none focus:border-depot-accent transition-colors"
               style={{ color: 'var(--depot-text)' }}
+              autoComplete="off"
             />
+            {trainName.trim() && !selectedTrain && matchingTrains.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full max-h-40 overflow-y-auto rounded-sm border border-depot-border bg-depot-panel shadow-lg">
+                {matchingTrains.slice(0, 8).map(train => (
+                  <button key={train.id ?? train.name} type="button" onClick={() => setTrainName(train.name)} className="block w-full px-3 py-2 text-left font-mono text-sm text-depot-text hover:bg-depot-dim">
+                    {train.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="mt-1 text-2xs font-mono text-depot-muted">
+              {trainsLoading ? 'Loading fleet…' : selectedTrain ? 'Valid train selected' : trainName.trim() ? matchingTrains.length ? 'Choose a matching train from the suggestions or enter its exact ID.' : 'No matching train in the fleet.' : 'Type to search or select a train.'}
+            </p>
           </div>
 
           <div>
@@ -244,7 +288,7 @@ function OverrideModal({ onClose }) {
 
           <button
             onClick={submit}
-            disabled={loading || !trainName.trim()}
+            disabled={loading || trainsLoading || !selectedTrain}
             className="w-full btn btn-warning flex items-center justify-center gap-2"
           >
             {loading ? <Spinner size={13} /> : <AlertTriangle size={13} />}
