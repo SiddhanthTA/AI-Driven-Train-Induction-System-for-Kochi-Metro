@@ -41,7 +41,7 @@ function TrafficSelector({ value, onChange }) {
 // ─── Train Row ────────────────────────────────────────────
 function TrainRow({ train, type }) {
   const [expanded, setExpanded] = useState(false)
-  const color = type === 'service' ? 'green' : type === 'standby' ? 'yellow' : 'red'
+  const color = type === 'service' ? 'green' : type === 'standby' ? 'yellow' : type === 'cleaning' ? 'cyan' : 'red'
   return (
     <>
       <tr className="cursor-pointer" onClick={() => setExpanded(e => !e)}>
@@ -52,7 +52,7 @@ function TrainRow({ train, type }) {
           </div>
         </td>
         <td>
-          {type !== 'maintenance' ? (
+          {type === 'service' || type === 'standby' ? (
             <span className={`font-mono text-xs ${
               train.score >= 0.7 ? 'text-depot-green' :
               train.score >= 0.4 ? 'text-depot-yellow' : 'text-depot-red'
@@ -122,6 +122,7 @@ function Panel({ title, variant, trains }) {
     service:     { border: '#00e676', bg: 'rgba(0,230,118,0.04)',  label: 'text-depot-green',  dot: 'green' },
     standby:     { border: '#ffd740', bg: 'rgba(255,215,64,0.04)', label: 'text-depot-yellow', dot: 'yellow' },
     maintenance: { border: '#ff1744', bg: 'rgba(255,23,68,0.04)',  label: 'text-depot-red',    dot: 'red' },
+    cleaning:    { border: '#00c2ff', bg: 'rgba(0,194,255,0.04)', label: 'text-depot-accent', dot: 'cyan' },
   }
   const s = colors[variant]
   return (
@@ -365,10 +366,11 @@ export default function InductionPanel() {
       </div>
 
       {/* ── 3 Panels full width ── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <Panel title="Service"     variant="service"      trains={display?.service     ?? []} />
         <Panel title="Standby"     variant="standby"      trains={display?.standby     ?? []} />
-        <Panel title="Maintenance" variant="maintenance"  trains={display?.maintenance ?? []} />
+        <Panel title="Technical Maintenance" variant="maintenance" trains={display?.maintenance ?? []} />
+        <Panel title="Cleaning" variant="cleaning" trains={display?.cleaning ?? []} />
       </div>
     </div>
   )
