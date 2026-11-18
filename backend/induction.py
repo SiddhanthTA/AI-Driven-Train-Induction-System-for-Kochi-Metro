@@ -744,6 +744,8 @@ def evaluate_trains(trains, traffic_level=3):
     standby = []
     maintenance = []
     cleaning = []
+    cleaning_bays = []
+    cleaning_queue = []
 
     # ---------------------------
     # STEP 1: HARD SAFETY FILTER
@@ -793,6 +795,7 @@ def evaluate_trains(trains, traffic_level=3):
             eligible.append(train)
 
     if not eligible and not maintenance:
+        LAST_CLEANING_PLAN = []
         maintenance_bays, maintenance_queue = allocate_maintenance_bays(
             maintenance,
             {t.name: t for t in trains}
