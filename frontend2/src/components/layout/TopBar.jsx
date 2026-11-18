@@ -1,8 +1,6 @@
 // src/components/layout/TopBar.jsx
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Moon, Sun } from 'lucide-react'
-import { useTheme } from '../../context/ThemeContext'
 import { useAuth } from '../../context/AuthContext'
 
 const PAGE_TITLES = {
@@ -18,7 +16,6 @@ const PAGE_TITLES = {
 
 export default function TopBar() {
   const { pathname } = useLocation()
-  const { theme, toggle } = useTheme()
   const [time, setTime] = useState(new Date())
   const { user, logout } = useAuth()
 
@@ -90,20 +87,6 @@ export default function TopBar() {
       Logout
     </button>
   </div>
-
-  {/* Theme Toggle */}
-  <button
-    onClick={toggle}
-    title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-    className="flex items-center justify-center w-8 h-8 rounded-sm border transition-all duration-200 hover:scale-110"
-    style={{
-      borderColor: 'var(--depot-border)',
-      background: 'var(--depot-dim)',
-      color: theme === 'dark' ? '#ffd740' : '#0284c7',
-    }}
-  >
-    {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
-  </button>
 
   {/* Clock */}
   <div className="text-right">
