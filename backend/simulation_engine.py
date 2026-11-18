@@ -32,7 +32,8 @@ def advance_one_day(
     active_cleaning = set(active_cleaning_names) if active_cleaning_names is not None else cleaning_names
 
     for train in trains:
-        if train.name not in cleaning_names:
+        if train.name not in active_cleaning:
+            # Waiting trains continue to age, allowing the cleaning queue to stay priority-ordered.
             train.days_since_cleaning += 1
 
         if train.name not in withheld_names:
