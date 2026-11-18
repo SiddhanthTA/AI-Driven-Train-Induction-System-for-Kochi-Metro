@@ -64,7 +64,7 @@ function TrainRow({ train, type }) {
           )}
         </td>
         <td>
-          {type !== 'maintenance' ? (
+          {type === 'service' || type === 'standby' ? (
             <span className="font-mono text-xs text-depot-muted">T{train.track} · P{train.position}</span>
           ) : (
             <span className="font-mono text-xs text-depot-muted">IBL</span>
@@ -144,9 +144,9 @@ function Panel({ title, variant, trains }) {
             <thead>
               <tr>
                 <th>Train</th>
-                {variant !== 'maintenance' ? <th>Score</th> : <th>Category</th>}
+                {variant === 'service' || variant === 'standby' ? <th>Score</th> : <th>Category</th>}
                 <th>Track</th>
-                {variant !== 'maintenance' ? <th>Shunts</th> : <th></th>}
+                {variant === 'service' || variant === 'standby' ? <th>Shunts</th> : <th></th>}
                 <th></th>
               </tr>
             </thead>
