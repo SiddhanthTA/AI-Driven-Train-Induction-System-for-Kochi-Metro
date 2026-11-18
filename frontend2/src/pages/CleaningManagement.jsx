@@ -34,6 +34,8 @@ function HygieneBar({ days }) {
 export default function CleaningManagement() {
   const [trains, setTrains] = useState([])
   const [cleaningPlan, setCleaningPlan] = useState([])
+  const [activeCleaning, setActiveCleaning] = useState([])
+  const [queuedCleaning, setQueuedCleaning] = useState([])
   const [loading, setLoading] = useState(false)
   const [sortKey, setSortKey] = useState('days_since_cleaning')
   const [sortDir, setSortDir] = useState('desc')
@@ -44,6 +46,8 @@ export default function CleaningManagement() {
       const [t, cp] = await Promise.all([getTrains(), getCleaningPlan()])
       setTrains(t)
       setCleaningPlan(cp.cleaning_trains || [])
+      setActiveCleaning(cp.cleaning_bays || [])
+      setQueuedCleaning(cp.cleaning_queue || [])
     } catch {}
     setLoading(false)
   }
@@ -95,21 +99,27 @@ export default function CleaningManagement() {
         ))}
       </div>
 
-      {/* Scheduled badge */}
+      {/* Active cleaning capacity and waiting queue are shown separately. */}
       {cleaningPlan.length > 0 && (
-        <div className="panel p-3 mb-4 border border-depot-accent/30 flex items-center gap-3">
-          <Droplets size={14} className="text-depot-accent" />
-          <div className="flex-1">
-            <span className="font-display font-bold text-xs text-depot-accent tracking-wide">
-              CLEANING SCHEDULED THIS CYCLE:
-            </span>
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
-              {cleaningPlan.map(name => (
-                <Badge key={name} variant="accent">{name}</Badge>
-              ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <div className="panel p-3 border border-depot-accent/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Droplets size={14} className="text-depot-accent" />
+              <span className="font-display font-bold text-xs text-depot-accent tracking-wide">ACTIVE CLEANING BAYS</span>
+              <span className="ml-auto font-mono text-depot-muted text-xs">{activeCleaning.length}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {activeCleaning.map(item => <Badge key={item.train} variant="accent">{item.train}</Badge>)}
+              {activeCleaning.length === 0 && <span className="text-depot-muted text-xs">No active assignments</span>}
             </div>
           </div>
-          <span className="font-mono text-depot-muted text-xs">{cleaningPlan.length} trains</span>
+          <div className="panel p-3 border border-depot-border">
+            <div className="font-display font-bold text-xs tracking-wide mb-2">CLEANING WAITING QUEUE <span className="font-mono text-depot-muted">{queuedCleaning.length}</span></div>
+            <div className="flex flex-wrap gap-1.5">
+              {queuedCleaning.map(item => <Badge key={item.train} variant="warning">{item.train}</Badge>)}
+              {queuedCleaning.length === 0 && <span className="text-depot-muted text-xs">No trains waiting</span>}
+            </div>
+          </div>
         </div>
       )}
 
@@ -177,7 +187,7 @@ export default function CleaningManagement() {
                       </td>
                       <td>
                         {scheduled
-                          ? <Badge variant="accent">Scheduled</Badge>
+                          ? <Badge variant="accent">{activeCleaning.some(item => item.train === t.name) ? "Active" : "Queued"}</Badge>
                           : <span className="text-depot-muted text-xs">—</span>
                         }
                       </td>
