@@ -523,11 +523,38 @@ export default function DepotLayout() {
               bays={layout.maintenance_bays || []}
               setSelectedTrain={setSelectedTrain}
             />
-
             <MaintenanceQueue
               queue={layout.maintenance_queue || []}
               setSelectedTrain={setSelectedTrain}
             />
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="panel p-4">
+              <div className="section-label mb-3">Simulated Cleaning Bays</div>
+              {(layout.cleaning_bays || []).length === 0 ? (
+                <div className="text-depot-muted text-xs font-mono">No active cleaning assignments</div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {layout.cleaning_bays.map((item) => (
+                    <TrainBlock key={item.train} name={item.train} type="bay" position={item.bay} />
+                  ))}
+                </div>
+              )}
+              <p className="font-mono text-2xs text-depot-muted mt-3">Logical simulation capacity; not a verified physical KMRL facility count.</p>
+            </div>
+            <div className="panel p-4">
+              <div className="section-label mb-3">Cleaning Waiting Queue</div>
+              {(layout.cleaning_queue || []).length === 0 ? (
+                <div className="text-depot-muted text-xs font-mono">No cleaning queue</div>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {layout.cleaning_queue.map((item, i) => (
+                    <TrainBlock key={item.train} name={item.train} type="queue" position={i + 1} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -535,7 +562,7 @@ export default function DepotLayout() {
       {layout && (
         <div className="mt-4 panel p-4">
           <div className="section-label mb-3">Depot Summary</div>
-          <div className="grid grid-cols-7 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-5 xl:grid-cols-9 gap-4">
             {[
               { key: 'track1', name: 'Track 1', color: '#00e676', type: 'service' },
               { key: 'track2', name: 'Track 2', color: '#00e676', type: 'service' },
@@ -544,6 +571,8 @@ export default function DepotLayout() {
               { key: 'inspection', name: 'IBL', color: '#ff1744', type: 'maintenance' },
               { key: 'maintenance_bays', name: 'Bays', color: '#00c2ff', type: 'active' },
               { key: 'maintenance_queue', name: 'Queue', color: '#ff6d00', type: 'waiting' },
+              { key: 'cleaning_bays', name: 'Clean Bays', color: '#00c2ff', type: 'cleaning' },
+              { key: 'cleaning_queue', name: 'Clean Queue', color: '#ff6d00', type: 'waiting' },
             ].map((item) => {
               const count = layout[item.key]?.length ?? 0
               return (
