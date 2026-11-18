@@ -67,11 +67,11 @@ function TrainRow({ train, type }) {
           {type === 'service' || type === 'standby' ? (
             <span className="font-mono text-xs text-depot-muted">T{train.track} · P{train.position}</span>
           ) : (
-            <span className="font-mono text-xs text-depot-muted">IBL</span>
+            <span className="font-mono text-xs text-depot-muted">{type === 'cleaning' ? 'Cleaning' : 'IBL'}</span>
           )}
         </td>
         <td>
-          {type !== 'maintenance' ? (
+          {type === 'service' || type === 'standby' ? (
             <span className="font-mono text-xs text-depot-muted">{train.shunting_moves ?? 0}</span>
           ) : (
             <span className="text-depot-muted">—</span>
