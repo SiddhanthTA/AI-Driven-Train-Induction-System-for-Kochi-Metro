@@ -1,22 +1,16 @@
 // src/context/ThemeContext.jsx
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect } from 'react'
 
-const ThemeContext = createContext()
+const ThemeContext = createContext({ theme: 'dark' })
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem('kmrl-theme') || 'dark'
-  )
-
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('kmrl-theme', theme)
-  }, [theme])
-
-  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+    document.documentElement.setAttribute('data-theme', 'dark')
+    localStorage.setItem('kmrl-theme', 'dark')
+  }, [])
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
+    <ThemeContext.Provider value={{ theme: 'dark' }}>
       {children}
     </ThemeContext.Provider>
   )
